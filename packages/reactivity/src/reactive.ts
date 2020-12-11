@@ -26,7 +26,14 @@ export interface Target {
   [ReactiveFlags.RAW]?: any
 }
 
+/*
+ * The WeakMap object is a collection of key/value pairs in which the keys are weakly referenced.
+ * The keys must be objects and the values can be arbitray values.
+ */
+
+// * collect reactive object
 export const reactiveMap = new WeakMap<Target, any>()
+// * collect readonly object
 export const readonlyMap = new WeakMap<Target, any>()
 
 const enum TargetType {
@@ -163,19 +170,21 @@ export function shallowReadonly<T extends object>(
   )
 }
 
+// * Reactive - CORE
 function createReactiveObject(
   target: Target,
   isReadonly: boolean,
   baseHandlers: ProxyHandler<any>,
   collectionHandlers: ProxyHandler<any>
 ) {
+  // if `target` not a object, return it.
   if (!isObject(target)) {
     if (__DEV__) {
       console.warn(`value cannot be made reactive: ${String(target)}`)
     }
     return target
   }
-  // target is already a Proxy, return it.
+  // `target` is already a Proxy, return it.
   // exception: calling readonly() on a reactive object
   if (
     target[ReactiveFlags.RAW] &&
@@ -183,7 +192,7 @@ function createReactiveObject(
   ) {
     return target
   }
-  // target already has corresponding Proxy
+  // `target` already has corresponding Proxy
   const proxyMap = isReadonly ? readonlyMap : reactiveMap
   const existingProxy = proxyMap.get(target)
   if (existingProxy) {
@@ -194,11 +203,14 @@ function createReactiveObject(
   if (targetType === TargetType.INVALID) {
     return target
   }
+  // create proxy for `target`
   const proxy = new Proxy(
     target,
     targetType === TargetType.COLLECTION ? collectionHandlers : baseHandlers
   )
+  // collect `target` proxy object into `proxyMap`
   proxyMap.set(target, proxy)
+  // return `target` proxy object
   return proxy
 }
 
