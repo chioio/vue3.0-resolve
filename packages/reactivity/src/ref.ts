@@ -6,6 +6,10 @@ import { CollectionTypes } from './collectionHandlers'
 
 declare const RefSymbol: unique symbol
 
+/*
+ * Ref: create base type reactive.
+ */
+
 export interface Ref<T = any> {
   value: T
   /**
@@ -27,6 +31,8 @@ export type ToRefs<T = any> = {
   [K in keyof T]: T[K] extends Ref ? T[K] : Ref<UnwrapRef<T[K]>>
 }
 
+// * if target is object, convert to use `reactive`, 
+// * otherwise use the base type target
 const convert = <T extends unknown>(val: T): T =>
   isObject(val) ? reactive(val) : val
 
@@ -51,6 +57,7 @@ export function shallowRef(value?: unknown) {
   return createRef(value, true)
 }
 
+//* ref implementation
 class RefImpl<T> {
   private _value: T
 
@@ -102,6 +109,7 @@ const shallowUnwrapHandlers: ProxyHandler<any> = {
   }
 }
 
+// * create proxy if object with refs is not reactive
 export function proxyRefs<T extends object>(
   objectWithRefs: T
 ): ShallowUnwrapRef<T> {
@@ -118,6 +126,7 @@ export type CustomRefFactory<T> = (
   set: (value: T) => void
 }
 
+// * custom ref implementation
 class CustomRefImpl<T> {
   private readonly _get: ReturnType<CustomRefFactory<T>>['get']
   private readonly _set: ReturnType<CustomRefFactory<T>>['set']
@@ -146,6 +155,7 @@ export function customRef<T>(factory: CustomRefFactory<T>): Ref<T> {
   return new CustomRefImpl(factory) as any
 }
 
+// * make targets object to `ref` if these targets are reactive objects
 export function toRefs<T extends object>(object: T): ToRefs<T> {
   if (__DEV__ && !isProxy(object)) {
     console.warn(`toRefs() expects a reactive object but received a plain one.`)
@@ -157,6 +167,7 @@ export function toRefs<T extends object>(object: T): ToRefs<T> {
   return ret
 }
 
+// * object ref implementation
 class ObjectRefImpl<T extends object, K extends keyof T> {
   public readonly __v_isRef = true
 
@@ -171,6 +182,7 @@ class ObjectRefImpl<T extends object, K extends keyof T> {
   }
 }
 
+// * make a single target to `ref` if this target is a reactive object
 export function toRef<T extends object, K extends keyof T>(
   object: T,
   key: K
